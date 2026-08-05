@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: "canopies: augmented canopies for 1-parameter fibered filtrations"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: "Paluzo-Hidalgo"
+    given-names: "Eduardo"
+    email: "epaluzo@us.es"
+    orcid: "https://orcid.org/0000-0002-4280-5945"
+abstract: >-
+  Exact detection of non-Hausdorff (structural) points and computation of
+  trajectories for 1-parameter fibered filtration functions. An independent
+  implementation building on the canopies of Giunti and Munch and the
+  linear-time vineyard updates of Cohen-Steiner, Edelsbrunner and Morozov;
+  it is not affiliated with, endorsed by, or produced in collaboration with
+  the authors of those works. All core arithmetic is exact rational
+  arithmetic.
+keywords:
+  - topological data analysis
+  - persistent homology
+  - vineyards
+  - canopies
+  - fibered filtration
+  - computational topology
+license: MIT
+version: "0.1.0"
+repository-code: "https://github.com/EduPH/Canopies"

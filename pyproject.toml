@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "canopies"
+version = "0.1.0"
+description = "Augmented canopies for 1-parameter fibered filtrations: exact detection of non-Hausdorff (structural) points and computation of trajectories"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Eduardo Paluzo-Hidalgo", email = "epaluzo@us.es" }]
+keywords = [
+    "topological data analysis",
+    "persistent homology",
+    "vineyards",
+    "canopies",
+    "fibered filtration",
+    "computational topology",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Typing :: Typed",
+]
+# the core is pure standard library -- exact rational arithmetic only
+dependencies = []
+
+[project.optional-dependencies]
+viz = ["matplotlib>=3.5", "numpy>=1.20", "pillow>=8.0"]
+dev = ["pytest>=7.0", "build>=1.0", "twine>=4.0", "matplotlib>=3.5", "numpy>=1.20", "pillow>=8.0"]
+
+[project.scripts]
+canopies = "canopies.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/EduPH/Canopies"
+Repository = "https://github.com/EduPH/Canopies"
+Issues = "https://github.com/EduPH/Canopies/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/canopies"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/canopies",
+    "tests",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CITATION.cff",
+]
+exclude = ["local"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
