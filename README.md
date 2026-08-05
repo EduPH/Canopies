@@ -478,4 +478,4 @@ MIT — see [LICENSE](LICENSE).
 ## Acknowledgments
 
 This code was produced during E. P-H visit to the University of Tokyo hosted by Prof. Yuichi Ike. This research is supported by the European Union’s Horizon 2020
-research and innovation programme under the Marie Skłodowska-Curie grant agreement No. 101153039 (CHALKS), and by JST, CREST Grant Number JPMJCR24Q1, Japan.
+research and innovation programme under the Marie Skłodowska-Curie grant agreement No. 101153039 (CHALKS, [doi.org/10.3030/101153039](https://doi.org/10.3030/101153039)), and by JST, CREST Grant Number JPMJCR24Q1 ([doi.org/10.52926/JPMJCR24Q1](	https://doi.org/10.52926/JPMJCR24Q1)), Japan.
