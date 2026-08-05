@@ -474,3 +474,8 @@ theory and this package for the software, separately.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Acknowledgments
+
+This code was produced during my visit at the University of Tokyo host by Prof. Yuichi Ike. E.P-H is supported by the European Union’s Horizon 2020
+research and innovation programme under the Marie Skłodowska-Curie grant agreement No. 101153039 (CHALKS).
