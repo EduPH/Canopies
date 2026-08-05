@@ -464,8 +464,7 @@ Eduardo Paluzo-Hidalgo — <epaluzo@us.es>
 
 ## Citing
 
-Citation metadata lives in [`CITATION.cff`](CITATION.cff); GitHub renders it as
-a "Cite this repository" button and Zenodo reads it when minting a DOI.
+Citation metadata lives in [`CITATION.cff`](CITATION.cff).
 
 This is an independent implementation. It builds on the two papers listed under
 [References](#references), but it is not affiliated with, endorsed by, or the
