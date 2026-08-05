@@ -477,5 +477,5 @@ MIT — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-This code was produced during my visit at the University of Tokyo host by Prof. Yuichi Ike. E.P-H is supported by the European Union’s Horizon 2020
-research and innovation programme under the Marie Skłodowska-Curie grant agreement No. 101153039 (CHALKS).
+This code was produced during E. P-H visit to the University of Tokyo hosted by Prof. Yuichi Ike. This research is supported by the European Union’s Horizon 2020
+research and innovation programme under the Marie Skłodowska-Curie grant agreement No. 101153039 (CHALKS), and by JST, CREST Grant Number JPMJCR24Q1, Japan.
