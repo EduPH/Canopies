@@ -464,12 +464,25 @@ Eduardo Paluzo-Hidalgo — <epaluzo@us.es>
 
 ## Citing
 
-Citation metadata lives in [`CITATION.cff`](CITATION.cff).
-
 This is an independent implementation. It builds on the two papers listed under
 [References](#references), but it is not affiliated with, endorsed by, or the
 product of collaboration with their authors — please cite those papers for the
 theory and this package for the software, separately.
+
+```
+@software{paluzo_hidalgo_2026_21802474,
+  author       = {Paluzo-Hidalgo, Eduardo},
+  title        = {canopies: augmented canopies for 1-parameter
+                   fibered filtrations
+                  },
+  month        = aug,
+  year         = 2026,
+  publisher    = {Zenodo},
+  version      = {v0.1.0},
+  doi          = {10.5281/zenodo.21802474},
+  url          = {https://doi.org/10.5281/zenodo.21802474},
+}
+```
 
 ## License
 
