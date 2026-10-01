@@ -69,7 +69,7 @@ Requires Python ≥ 3.9.
 | | what it does | entry point |
 |---|---|---|
 | **Chosen pairing** | The pairing of a *total* consistent order is unique (Lemma 2.11); computed by Z/2 boundary reduction realizing the split conditions SC1–3. | `pairing_for_order` |
-| **Structural point detection** | Decides whether a parameter value is a non-Hausdorff point of the A-canopy (Def. 3.15), by the criterion *"p is structural ⟺ two total consistent orders of g_p yield different chosen pairings"*. **Lazy**: stops at the first disagreement. Separates structural from *coincidental* multiplicity (Ex. 3.16). | `detect_structural` |
+| **Structural point detection** | Decides whether a parameter value is a non-Hausdorff point of the A-canopy (Def. 3.15), by the criterion *"p is structural ⟺ the pairing has two pairs (σ,τ), (σ′,τ′) at the same diagram point such that some consistent order of g_p pairs σ with τ′ and σ′ with τ"* (a self filtration equivalence, Def. 2.18). **Lazy**: decided at once when no diagram point has multiplicity ≥ 2; otherwise stops at the first witness order. Separates structural from *coincidental* multiplicity (Ex. 3.16). | `detect_structural` |
 | **First structural point** | Walks crossing events in increasing time and returns at the first witness — nothing else is computed. | `find_first_structural` |
 | **Full canopy** | Trajectories (Def. 3.6) along the whole path, with *all* valid continuations enumerated at every switch. More than one continuation **is** the non-Hausdorff branching. | `compute_canopy` |
 | **Diagrams** | A-mode (diagonal kept) and D-mode (diagonal dropped), matching A- and D-canopies (Def. 4.3), at any parameter value. | `Canopy.diagram` |
@@ -265,16 +265,32 @@ removes the pairing freedom of Theorem 2.9, so the only remaining choice is
 lazily as products, over tie blocks, of linear extensions of the face poset.
 
 **Detection criterion.** `p` is a structural (non-Hausdorff) point of the
-A-canopy ⟺ two total consistent orders of `g_p` yield different chosen
-pairings. (⇐) is the constant-projection trajectory of Example 3.12. (⇒):
-non-Hausdorff partners share a fiber, and for `q` near `p` every order
-consistent with `g_q` is consistent with `g_p`, so any discretized
-combinatorial-equivalence chain through a small neighbourhood is realized by
-re-orderings of `g_p` alone. The criterion separates structural from
-coincidental multiplicity (Ex. 3.16) correctly — see
-`test_coincidental_example_3_16` and the `--at 1/2` run above.
+A-canopy ⟺ the base pairing `P₀` contains two pairs `e = (σ,τ)`,
+`e′ = (σ′,τ′)` with `η(e) = η(e′)` (same birth dimension) and some total
+consistent order of `g_p` whose pairing contains the crossed pairs `(σ,τ′)`
+and `(σ′,τ)`. Then swapping `e` and `e′` is a filtration equivalence of `P₀`
+with itself (Def. 2.18 with both orders equal, as for `f` in Example 2.19),
+which is the constant-projection trajectory of Example 3.12. Equal `η` is
+necessary: `η : E → H` is continuous (Def. 3.1) and `H` is Hausdorff, so
+fiber points at different diagram points are always separated. Non-Hausdorff
+partners share a fiber, and for `q` near `p` every order consistent with
+`g_q` is consistent with `g_p`, so only re-orderings of `g_p` matter.
 
-**Laziness.** `detect_structural` stops at the first disagreeing order; only
+*Two orders giving different pairings is necessary but not sufficient.* A
+single tie with a vineyard switch changes the pairing, but the induced
+equivalence is unique and the fiber points stay separated: this is `g` in
+Example 2.19 ("the only available combinatorial equivalence…"), and
+Example 3.14 calls such ties benign. See
+`test_detect_not_structural_g_example_2_19` and
+`test_single_tie_switch_is_not_structural`. The criterion also separates
+structural from coincidental multiplicity (Ex. 3.16; no witness order exists).
+Essential classes born at the same value are not treated as inseparable by
+default (the crossed-pair condition of Def. 2.18 is vacuous for `★`; pass
+`essential_vacuous=True` for the literal reading).
+
+**Laziness.** `detect_structural` answers immediately when no finite diagram
+point has multiplicity ≥ 2 (one reduction), and otherwise stops at the first
+witness order; only
 the *not*-structural answer requires exhausting the tie-block extensions (that
 direction is a proof over all orders; `max_orders` truncates it).
 `find_first_structural` walks crossing events in time order and returns at the
@@ -294,8 +310,10 @@ triangulated grid with 14,595 events, the full canopy takes ~4 s (it
 previously exceeded 45 s), with exact event location now the dominant cost.
 
 **Trajectories.** Between events the pairing is constant; at an event the
-old/new pairings are diffed (a change certifies a structural point, since both
-one-sided limit orders are consistent *at* the event). All continuations
+old/new pairings are diffed. A change (switch) does *not* by itself make the
+event structural: at a single tie the continuation is forced. Whether the event
+is structural is decided by `detect_structural` at `t` (or, with `deep=False`,
+by having more than one valid continuation). All continuations
 compatible with filtration equivalence (equal η at t, equal dimension) are
 recorded in `SwitchEvent.matchings`; `policy` picks one so a concrete section
 is always produced — Morozov-style vineyard algorithms implicitly make this
@@ -349,15 +367,20 @@ yield every concatenation B₁·…·Bₘ, each Bᵢ ranging over the linear
 DETECT-STRUCTURAL(K, f)                # lazy, Def. 3.15
 ──────────────────────────────────────────────────────────────
 base ← first order of ORDERS(K, f);  build RU(base);  P₀ ← its pairing
+C ← classes of finite pairs of P₀ with equal (η, birth dim), size ≥ 2
+if C = ∅: return NOT STRUCTURAL    # η continuous ⇒ partners share η
 # pre-pass: O(n/w) per candidate via TRANSPOSE
 for each adjacent (σ,τ) in base, tied, non-face-related:
-    if TRANSPOSE reports a switch: return STRUCTURAL (witness)
+    if TRANSPOSE reports a switch and the new pairing Q contains the
+       crossed pairs (σ,τ′), (σ′,τ) of some e, e′ in a class of C:
+        return STRUCTURAL (e, e′ inseparable; witness Q)
     TRANSPOSE again to revert                # pairing restored (uniqueness)
 # fall-back: full lazy enumeration, early exit
 for each further order ≺ of ORDERS(K, f):    # capped by max_orders
     bubble the decomposition to ≺ by adjacent TRANSPOSEs
-    if pairing ≠ P₀: return STRUCTURAL (witness ≺)
-return NOT STRUCTURAL              # proof = all orders visited
+    if its pairing contains crossed pairs of some e, e′ in C:
+        return STRUCTURAL (witness ≺)
+return NOT STRUCTURAL              # coincidental multiplicity
 
 ──────────────────────────────────────────────────────────────
 CROSSINGS(g)                           # candidate events, exact
@@ -388,10 +411,11 @@ for each event t:
              re-sort by the values just after t (stable)
     bubble RU to target by TRANSPOSEs; rebuild pairing only if switched
     removed ← P_old \ P_new ;  added ← P_new \ P_old
-    if removed ≠ ∅:                            # switch ⇒ structural at t
+    if removed ≠ ∅:                            # switch (NOT necessarily structural)
         M ← all bijections removed → added with η_t(old) = η_t(new)
               and equal birth dimension        # filtration equivalence
-        record SwitchEvent(t, M)               # |M| > 1 ⇔ non-Hausdorff choice
+        record SwitchEvent(t, M)               # structural ⇔ DETECT-STRUCTURAL(t)
+                                               #   (deep=False: |M| > 1)
         continue trajectories along argmax_M agreement with policy
               (follow_death: keep τ; follow_birth: keep σ)
 for each tie interval: DETECT-STRUCTURAL at its midpoint; warn if structural
@@ -400,12 +424,13 @@ return trajectories Γ(t) = (t, σ(t), τ(t)), events with all matchings,
 ```
 
 Invariants used throughout: the diagram η(π⁻¹(t)) is order-independent
-(Lemma 2.14), so only the *pairing* can distinguish orders; a switch at an
-event is automatically structural because both one-sided limit orders are
-consistent at t itself; and the pairing of a total order is unique
+(Lemma 2.14), so only the *pairing* can distinguish orders; non-Hausdorff
+partners must have the same η (η is continuous), so a structural point needs
+a diagram point of multiplicity ≥ 2 — a switch alone is not enough; and the
+pairing of a total order is unique
 (Lemma 2.11), which is what makes the TRANSPOSE-and-revert pre-pass and the
 switch flags sound. The only expensive branch is proving NOT STRUCTURAL, which
-must exhaust the tie-block extensions; every other path exits at the first
+must exhaust the tie-block extensions (only when some diagram point has multiplicity ≥ 2); every other path exits at the first
 witness.
 
 *The estimated complexity:*
@@ -434,8 +459,9 @@ deep=True:   T = O( n²·β·M(L) + n³/w + m·n·M(L) )
   tie blocks (factorial for large all-incomparable blocks); use `max_orders`.
   Structural answers usually arrive within a handful of orders.
 - If many unrelated simplices share one constant value (e.g. "everything else
-  enters at 0"), the diagonal `(0,0)` pairs are swappable and every parameter
-  is structural in the strict A-sense. Give base simplices distinct values, or
+  enters at 0"), the diagonal `(0,0)` pairs share a diagram point and can be
+  swappable (when some order realizes the crossed pairs), making every
+  parameter structural in the strict A-sense. Give base simplices distinct values, or
   report with `mode="D"`.
 - Two simplices equal on a whole subinterval are reported as `tie_intervals`
   (order ambiguous there; the chosen section is one valid choice).

@@ -113,11 +113,33 @@ def test_detect_structural_double_tie():
     assert det.structural_points(f, mode="D") == {(Fr(2, 3), Fr(7, 3))}
 
 
-def test_detect_structural_g():
-    """g from Fig. 1 (a=1,b=2,c=d=3) is structural (two orders disagree)."""
+def test_detect_not_structural_g_example_2_19():
+    """g from Fig. 1 (a=1,b=2,c=d=3): the two orders give different pairings,
+    but 'because f(a) != f(b), the only available combinatorial equivalence is
+    (a,d)->(a,c); (b,c)->(b,d)' (Example 2.19).  Diagram points (1,3), (2,3)
+    are distinct, so the fiber points are separated by eta: NOT structural."""
     cx = make_L()
     det = detect_structural(cx, fvals(cx, 1, 2, 3, 3))
-    assert det.structural is True
+    assert det.structural is False
+    assert det.orders_checked == 1          # no multiplicity: decided at once
+
+
+def test_single_tie_switch_is_not_structural():
+    """Regression: a births-swap vineyard switch at a single tie b=c.
+    Orders disagree ({(b,ab),(c,bc)} vs {(b,bc),(c,ab)}) but the diagram
+    points (1,5), (1,7) are distinct, so the point is Hausdorff."""
+    cx = Complex([(0,), (1,), (2,), (1, 2), (0, 1)],
+                 labels={"a": (0,), "b": (1,), "c": (2,), "bc": (1, 2), "ab": (0, 1)})
+    plf = PLFiltration(cx, {"a": 0, "b": [(0, Fr(1, 2)), (1, Fr(3, 2))],
+                            "c": [(0, Fr(3, 2)), (1, Fr(1, 2))], "bc": 5, "ab": 7})
+    det = detect_structural(cx, plf.values(Fr(1, 2)))
+    assert det.structural is False
+    can = compute_canopy(cx, plf)
+    (e,) = can.events
+    assert e.is_switch and e.forced and not e.structural
+    assert can.structural_events() == []
+    can_shallow = compute_canopy(cx, plf, deep=False)
+    assert not can_shallow.events[0].structural
 
 
 def test_detect_not_structural_distinct_values():
@@ -150,16 +172,28 @@ def test_coincidental_example_3_16():
     assert det.structural is False
 
 
-def test_structural_with_essential_classes():
-    """A circle: two tied edges swap which one creates the essential 1-class."""
+def test_essential_switch_single_tie_not_structural():
+    """A circle: two tied edges swap which one creates the essential 1-class.
+    The pairing changes, but the switched pairs sit at distinct diagram points
+    (a 0-dim point and the essential 1-dim point): NOT structural."""
     cx = Complex([(1,), (2,), (3,), (1, 2), (2, 3), (1, 3)])
     f = [-3, -2, -1, 1, 1, 0]  # edges 12 and 23 tied at 1
+    order = next(total_consistent_orders(cx, f))
+    P = pairing_for_order(cx, order)
+    assert any(pr[1] == STAR and cx.dim[pr[0]] == 1 for pr in P)
     det = detect_structural(cx, f)
+    assert det.structural is False
+
+
+def test_equal_eta_essential_classes():
+    """Two essential classes born at the same value.  Default: not structural
+    (consistent with the reading of Example 3.16).  Literal Def. 2.18
+    (crossed-pair condition vacuous for STAR): structural."""
+    cx = Complex([(1,), (2,)])
+    assert detect_structural(cx, [0, 0]).structural is False
+    det = detect_structural(cx, [0, 0], essential_vacuous=True)
     assert det.structural is True
-    diff = {frozenset((cx.name(s), cx.name(t)) for s, t in
-            (det.base_pairing ^ det.witness_pairing))}
-    stars = [pr for pr in det.base_pairing ^ det.witness_pairing if pr[1] == STAR]
-    assert stars  # the essential pair (sigma, STAR) is among the switched pairs
+    assert det.structural_points([0, 0]) == {(0, float("inf"))}
 
 
 # --------------------------------------------------------------------------

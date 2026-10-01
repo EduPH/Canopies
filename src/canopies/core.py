@@ -15,19 +15,24 @@ What is implemented
 
 * Structural / non-Hausdorff point detection (Definition 3.15).  Criterion:
 
-      p in B is structural  <=>  two total consistent orders of g_p
-                                 yield different chosen pairings.
+      p in B is structural  <=>  the base pairing P0 of g_p has two pairs
+                                 e = (s,t), e' = (s',t') with eta(e) = eta(e')
+                                 (same birth dimension) and some total
+                                 consistent order of g_p pairs s with t' and
+                                 s' with t  (a witness).
 
-  Sufficiency is the mechanism of Example 3.12: a trajectory with constant
-  projection that walks through re-orderings compatible with g_p swaps the
-  two fiber points, so each lies in every neighbourhood of the other.
-  Necessity: non-Hausdorff partners must lie in the same fiber (B is
-  Hausdorff and basis neighbourhoods project into arbitrarily small U), and
-  for q close enough to p every order consistent with g_q is consistent with
-  g_p (strict inequalities of g_p persist near p); since the chosen pairing
-  of a *total* order depends on the order alone, any discretized equivalence
-  chain through a small U induces the same pairing change by re-orderings of
-  g_p itself.
+  Then swapping e and e' is a filtration equivalence of P0 with itself
+  (Def. 2.18 with both orders equal; Example 2.19 for f), the mechanism of
+  Example 3.12.  Equal eta is necessary because eta : E -> H is continuous
+  (Def. 3.1) and H is Hausdorff, so fiber points with different diagram
+  values are always separated (cf. the proof of Prop. 5.2).  Non-Hausdorff
+  partners lie in the same fiber, and near p every order consistent with g_q
+  is consistent with g_p, so only re-orderings of g_p itself matter.
+
+  "Two consistent orders give different pairings" is necessary but NOT
+  sufficient: a single tie with a vineyard switch changes the pairing, yet
+  the equivalence is unique (Example 2.19 for g; Example 3.14 calls such ties
+  benign).
 
   The search is *lazy*: total consistent orders are enumerated one at a time
   (products of linear extensions of the "tie blocks") and the search stops at
@@ -494,26 +499,40 @@ def total_consistent_orders(cx: Complex, fvals: Sequence, tol=None) -> Iterator[
 
 @dataclass
 class Detection:
-    """Result of the lazy structural-point check at one parameter value."""
+    """Result of the lazy structural-point check at one parameter value.
+
+    ``structural`` is True iff the base pairing admits a non-identity filtration
+    equivalence onto itself (Def. 2.18 with both orders equal, as for f in
+    Example 2.19 of Giunti--Munch): two distinct pairs e = (s, t), e' = (s', t')
+    with eta(e) = eta(e'), equal birth dimension, and a consistent order (the
+    *witness*) whose pairing contains the crossed pairs (s, t') and (s', t).
+    Such e, e' are non-Hausdorff partners; ``swappable`` records them.
+    """
     structural: Optional[bool]        # True / False / None (search truncated by max_orders)
     orders_checked: int
     base_order: List[int]
     base_pairing: Pairing
     witness_order: Optional[List[int]] = None
     witness_pairing: Optional[Pairing] = None
+    swappable: Optional[Tuple[Pair, Pair]] = None   # the two inseparable pairs
+    reason: str = ""
 
     @property
     def differing_pairs(self) -> FrozenSet[Pair]:
-        if not self.structural:
+        """Pairs of the base and witness pairings that differ (the switch that
+        realizes the crossed pairing)."""
+        if not self.structural or self.witness_pairing is None:
             return frozenset()
         return self.base_pairing ^ self.witness_pairing
 
     def structural_points(self, fvals: Sequence, mode: str = "A") -> set:
-        """Diagram points (b, d) hit by the differing pairs.
+        """Structural diagram points (b, d): eta of the inseparable pairs.
         mode 'A': A-canopy notion (Def. 3.15), diagonal included.
         mode 'D': D-canopy notion (Def. 4.3), diagonal dropped."""
         pts = set()
-        for pr in self.differing_pairs:
+        if not self.structural or self.swappable is None:
+            return pts
+        for pr in self.swappable:
             b, d = eta_of_pair(fvals, pr)
             if mode == "D" and b == d:
                 continue
@@ -524,40 +543,87 @@ class Detection:
         if self.structural is None:
             return f"inconclusive after {self.orders_checked} orders"
         if not self.structural:
-            return f"not structural (all {self.orders_checked} total consistent orders agree)"
-        return (f"STRUCTURAL after {self.orders_checked} orders:\n"
-                f"  order {[cx.name(i) for i in self.base_order]}\n"
-                f"    -> {format_pairing(cx, self.base_pairing)}\n"
-                f"  order {[cx.name(i) for i in self.witness_order]}\n"
-                f"    -> {format_pairing(cx, self.witness_pairing)}\n"
-                f"  differing pairs: {format_pairing(cx, self.differing_pairs)}")
+            return f"not structural after {self.orders_checked} orders ({self.reason})"
+        e, e2 = self.swappable
+        out = (f"STRUCTURAL after {self.orders_checked} orders: "
+               f"{cx.pair_name(e)} and {cx.pair_name(e2)} are inseparable\n"
+               f"  base order {[cx.name(i) for i in self.base_order]}\n"
+               f"    -> {format_pairing(cx, self.base_pairing)}")
+        if self.witness_order is not None:
+            out += (f"\n  witness order {[cx.name(i) for i in self.witness_order]}\n"
+                    f"    -> {format_pairing(cx, self.witness_pairing)}")
+        return out
+
+
+def _multiplicity_classes(cx: Complex, fvals: Sequence, P: Pairing, eq) -> List[List[Pair]]:
+    """Pairs of P grouped by (eta, birth dimension); only groups of size >= 2.
+    A non-Hausdorff partner of e must have the same eta as e (eta : E -> H is
+    continuous, Def. 3.1, and H is Hausdorff), so these are the only candidates."""
+    groups: List[List[Pair]] = []
+    keys: List[tuple] = []
+    for pr in sorted(P, key=_pair_key):
+        b, d = eta_of_pair(fvals, pr)
+        dm = cx.dim[pr[0]]
+        for k, (b2, d2, dm2) in enumerate(keys):
+            if dm == dm2 and eq(b, b2) and ((d == INF and d2 == INF) or (d != INF and d2 != INF and eq(d, d2))):
+                groups[k].append(pr)
+                break
+        else:
+            keys.append((b, d, dm))
+            groups.append([pr])
+    return [g for g in groups if len(g) >= 2]
+
+
+def _crossed_witness(groups: List[List[Pair]], Q: Pairing) -> Optional[Tuple[Pair, Pair]]:
+    """Return (e, e') from one group whose crossed pairs both lie in Q, if any."""
+    for g in groups:
+        for (s, t), (s2, t2) in combinations(g, 2):
+            if (s, t2) in Q and (s2, t) in Q:
+                return (s, t), (s2, t2)
+    return None
 
 
 def detect_structural(cx: Complex, fvals: Sequence, tol=None,
                       max_orders: Optional[int] = None,
                       transposition_prepass: bool = True,
-                      ru: Optional[RUDecomposition] = None) -> Detection:
+                      ru: Optional[RUDecomposition] = None,
+                      essential_vacuous: bool = False) -> Detection:
     """Lazily decide whether the parameter with filtration values `fvals` is a
-    structural (non-Hausdorff) point of the A-canopy.
+    structural (non-Hausdorff) point of the A-canopy (Def. 3.15).
 
-    Enumerates total consistent orders and stops at the FIRST pair of orders
-    whose (unique, Lemma 2.11) chosen pairings differ.  All pairings after
-    the first are obtained by Morozov (CEM) transposition updates of a single
-    RU-decomposition, O(n/word) per transposition, instead of O(n^3)
-    re-reductions:
-      * pre-pass: each tied, non-face-related adjacent transposition of the
-        base order is applied and reverted; the update itself reports whether
-        the pairing switched.
-      * fall-back enumeration: each successive order is reached by bubbling
-        adjacent transpositions from the previous one.
+    Criterion (Def. 2.18 with both orders equal, Example 2.19 for f): p is
+    structural iff the base pairing P0 contains two distinct pairs
+    e = (s, t), e' = (s', t') with
+      (i)  eta(e) = eta(e') and equal birth dimension  -- a diagram point of
+           multiplicity >= 2 (necessary: eta is continuous, Def. 3.1), and
+      (ii) some total consistent order of g_p whose pairing contains the
+           crossed pairs (s, t') and (s', t)  -- the witness.
+    Then swapping e and e' is a filtration equivalence of P0 with itself, so
+    e and e' lie in every neighbourhood of each other.
+
+    NOTE. "Two consistent orders give different pairings" is necessary but
+    NOT sufficient: a single tie with a vineyard switch changes the pairing
+    while the induced equivalence is unique and eta separates the fiber
+    points (Example 2.19 for g; Example 3.14 calls such ties benign).
+
+    Essential pairs (t = t' = STAR): the crossed pairs equal the original
+    ones, so (ii) is vacuous.  Read literally, Def. 2.18 then makes any two
+    essential classes born at the same value inseparable -- which would make
+    Example 3.16 structural through its two (0, inf) points, contradicting the
+    paper's reading of that example ("separate connected components").  By
+    default (essential_vacuous=False) equal-eta essential pairs are therefore
+    NOT treated as inseparable; set essential_vacuous=True for the literal
+    reading.
+
+    Laziness: if no diagram point has multiplicity >= 2 the answer is NOT
+    structural immediately (one reduction).  Otherwise consistent orders are
+    enumerated (CEM transpositions on one RU-decomposition) until a witness is
+    found; proving NOT structural (coincidental multiplicity, Ex. 3.16)
+    exhausts the tie-block extensions.  `max_orders` truncates the search,
+    returning structural=None.
 
     `ru`, if given, must hold a decomposition whose order is consistent with
-    `fvals`; it is copied, so the caller's decomposition is untouched.  This
-    lets compute_canopy reuse its running decomposition at event times.
-
-    If the point is NOT structural the full enumeration must finish to prove
-    it (worst case: product of linear-extension counts of the tie blocks);
-    `max_orders` truncates the search, returning structural=None.
+    `fvals`; it is copied, so the caller's decomposition is untouched.
     """
     check_filtration(cx, fvals)
     if ru is None:
@@ -569,6 +635,18 @@ def detect_structural(cx: Complex, fvals: Sequence, tol=None,
     v0 = work.version
     checked = 1
     eq = (lambda a, b: a == b) if tol is None else (lambda a, b: abs(a - b) <= tol)
+
+    groups = _multiplicity_classes(cx, fvals, P0, eq)
+    if essential_vacuous:
+        for g in groups:                   # literal Def. 2.18: (ii) is vacuous
+            ess = [pr for pr in g if pr[1] == STAR]
+            if len(ess) >= 2:
+                return Detection(True, checked, base, P0, swappable=(ess[0], ess[1]),
+                                 reason="equal-eta essential classes (literal Def. 2.18)")
+    groups = [g for g in ([pr for pr in g if pr[1] != STAR] for g in groups) if len(g) >= 2]
+    if not groups:
+        return Detection(False, checked, base, P0,
+                         reason="no finite diagram point of multiplicity >= 2")
     if transposition_prepass:
         for k in range(cx.n - 1):
             i, j = work.order[k], work.order[k + 1]
@@ -576,21 +654,28 @@ def detect_structural(cx: Complex, fvals: Sequence, tol=None,
                 switched = work.transpose(k)
                 checked += 1
                 if switched:
-                    return Detection(True, checked, base, P0,
-                                     list(work.order), work.pairing())
-                work.transpose(k)          # revert (pairing provably unchanged)
+                    Q = work.pairing()
+                    hit = _crossed_witness(groups, Q)
+                    if hit is not None:
+                        return Detection(True, checked, base, P0, list(work.order), Q,
+                                         swappable=hit, reason="witness order found")
+                work.transpose(k)          # revert (pairing is a function of the order)
     for order in total_consistent_orders(cx, fvals, tol):
         if order == base:
             continue
         if max_orders is not None and checked >= max_orders:
-            return Detection(None, checked, base, P0)
+            return Detection(None, checked, base, P0, reason="max_orders reached")
         _bubble_to(work, order)
         checked += 1
         if work.version != v0:             # a switch happened somewhere en route
-            P = work.pairing()
-            if P != P0:
-                return Detection(True, checked, base, P0, list(order), P)
-    return Detection(False, checked, base, P0)
+            Q = work.pairing()
+            if Q != P0:
+                hit = _crossed_witness(groups, Q)
+                if hit is not None:
+                    return Detection(True, checked, base, P0, list(order), Q,
+                                     swappable=hit, reason="witness order found")
+    return Detection(False, checked, base, P0,
+                     reason="multiplicity is coincidental: no witness order")
 
 
 # --------------------------------------------------------------------------
@@ -732,9 +817,12 @@ def _choose_matching(matchings: List[Dict[Pair, Pair]], policy: str) -> Dict[Pai
 @dataclass
 class SwitchEvent:
     """One crossing event of the path.  If `removed` is non-empty the pairing
-    changed across the event (a switch), which certifies a structural point;
-    `matchings` lists every valid trajectory continuation -- more than one
-    matching = a genuine non-Hausdorff choice."""
+    changed across the event (a switch).  A switch alone does NOT make the
+    event structural: for a single tie the continuation is forced and the
+    fiber points stay separated by eta (Example 2.19 for g / Example 3.14 of
+    Giunti--Munch).  The event is structural iff the full detection at t says
+    so (deep=True), or, without detection, iff more than one trajectory
+    continuation is valid (`matchings` has more than one element)."""
     t: Fraction
     old_pairing: Pairing
     new_pairing: Pairing
@@ -750,23 +838,26 @@ class SwitchEvent:
 
     @property
     def structural(self) -> bool:
-        if self.removed:
-            return True
-        return bool(self.detection and self.detection.structural)
+        if self.detection is not None:
+            return bool(self.detection.structural)
+        return self.is_switch and not self.forced
 
     @property
     def forced(self) -> bool:
         return len(self.matchings) <= 1
 
     def structural_points(self, fvals: Sequence, mode: str = "A") -> set:
-        pts = set()
-        for pr in set(self.removed) | set(self.added):
-            b, d = eta_of_pair(fvals, pr)
-            if mode == "D" and b == d:
-                continue
-            pts.add((b, d))
-        if not pts and self.detection and self.detection.structural:
-            pts = self.detection.structural_points(fvals, mode)
+        if not self.structural:
+            return set()
+        if self.detection is not None:
+            return self.detection.structural_points(fvals, mode)
+        pts = set()                        # deep=False: pairs with >1 valid target
+        for r in self.removed:
+            if len({m[r] for m in self.matchings}) > 1:
+                b, d = eta_of_pair(fvals, r)
+                if mode == "D" and b == d:
+                    continue
+                pts.add((b, d))
         return pts
 
 
@@ -841,7 +932,9 @@ class Canopy:
         for e in self.events:
             if e.is_switch:
                 alt = "FORCED" if e.forced else f"{len(e.matchings)} valid continuations (choice!)"
-                lines.append(f"  t={e.t}: SWITCH (structural, non-Hausdorff) {alt}")
+                kind = ("structural, non-Hausdorff" if e.structural
+                        else "not structural: Hausdorff")
+                lines.append(f"  t={e.t}: SWITCH ({kind}) {alt}")
                 lines.append(f"     {format_pairing(cx, e.removed)}  ->  {format_pairing(cx, e.added)}")
                 for m in e.matchings:
                     tag = " (chosen)" if m == e.chosen else ""
@@ -849,7 +942,7 @@ class Canopy:
                         f"{cx.pair_name(r)}->{cx.pair_name(a)}" for r, a in sorted(m.items(), key=lambda kv: _pair_key(kv[0]))) + tag)
             elif e.structural:
                 lines.append(f"  t={e.t}: latent structural point (pairing continuous on the "
-                             f"chosen section, but orders at t disagree)")
+                             f"chosen section, but some order at t realizes a crossed pairing)")
             else:
                 lines.append(f"  t={e.t}: benign crossing (not structural)")
         for (t0, t1, (i, j), det) in self.tie_intervals:
@@ -949,14 +1042,16 @@ def compute_canopy(cx: Complex, plf: PLFiltration, policy: str = "follow_death",
       order, hence a constant chosen pairing (recomputed per segment; the
       diagram itself is order-independent by Lemma 2.14).
     * At each event the old/new pairings are compared.  A change (switch)
-      certifies a structural point: the one-sided limit orders are both
-      consistent AT the event time and give different pairings.  All valid
+      does NOT by itself make the event structural (a single tie switches
+      the pairing but the continuation is forced).  All valid
       continuations are enumerated; `policy` ('follow_death'/'follow_birth')
       picks one so a concrete section is always produced, exactly as
       Morozov-style vineyard algorithms implicitly do.
     * With deep=True, a full lazy detection runs at every event time, which
-      also catches latent structural points (orders at t disagree although
-      the pairing is the same on both sides, e.g. tangential/multi-way ties).
+      decides structurality exactly (Detection) and also catches latent
+      structural points (pairing unchanged across t, e.g. tangential ties).
+      With deep=False an event is reported structural iff more than one
+      continuation is valid.
     """
     event_times, raw_intervals, pairs_at = plf.crossings(return_pairs=True)
     knots = [Fraction(0)] + list(event_times) + [Fraction(1)]
