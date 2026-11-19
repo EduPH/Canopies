@@ -506,7 +506,7 @@ theory and this package for the software, separately.
   publisher    = {Zenodo},
   version      = {v0.1.1},
   doi          = {10.5281/zenodo.24368500},
-  url          = {[https://doi.org/10.5281/zenodo.21802474](https://doi.org/10.5281/zenodo.24368500)},
+  url          = {https://doi.org/10.5281/zenodo.21802474},
 }
 ```
 
