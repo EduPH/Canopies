@@ -496,7 +496,7 @@ product of collaboration with their authors — please cite those papers for the
 theory and this package for the software, separately.
 
 ```
-@software{paluzo_hidalgo_2026_21802474,
+@software{paluzo_hidalgo_2026_24368500,
   author       = {Paluzo-Hidalgo, Eduardo},
   title        = {canopies: augmented canopies for 1-parameter
                    fibered filtrations
@@ -506,7 +506,7 @@ theory and this package for the software, separately.
   publisher    = {Zenodo},
   version      = {v0.1.1},
   doi          = {10.5281/zenodo.24368500},
-  url          = {https://doi.org/10.5281/zenodo.21802474},
+  url          = {https://doi.org/10.5281/zenodo.24368500},
 }
 ```
 
