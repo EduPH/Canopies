@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "canopies"
-version = "0.1.0"
+version = "0.1.1"
 description = "Augmented canopies for 1-parameter fibered filtrations: exact detection of non-Hausdorff (structural) points and computation of trajectories"
 readme = "README.md"
 requires-python = ">=3.9"

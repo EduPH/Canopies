@@ -501,10 +501,10 @@ theory and this package for the software, separately.
   title        = {canopies: augmented canopies for 1-parameter
                    fibered filtrations
                   },
-  month        = aug,
+  month        = nov,
   year         = 2026,
   publisher    = {Zenodo},
-  version      = {v0.1.0},
+  version      = {v0.1.1},
   doi          = {10.5281/zenodo.21802474},
   url          = {https://doi.org/10.5281/zenodo.21802474},
 }
